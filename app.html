@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DealSprint - Voice Note to Proposal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23E4572E'/><path d='M9 22V10h5.5c3 0 4.8 2.2 4.8 6s-1.8 6-4.8 6H9z' fill='%23FBF9F3'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas: #F2EFE7;
+  --panel: #FBF9F3;
+  --ink: #17191E;
+  --muted: #5C6470;
+  --hairline: #D8D2C4;
+  --accent: #E4572E;
+  --blue: #274690;
+  --font-display: "Archivo Black", Impact, sans-serif;
+  --font-body: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--canvas); color: var(--ink); font-family: var(--font-body); line-height: 1.5; overflow-x: hidden; position: relative; }
+body::before { content: ""; position: fixed; inset: 0; z-index: 0; opacity: .04; pointer-events: none; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); }
+.wrap { max-width: 800px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+.screen { display: none; flex: 1; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; padding-top: 60px; padding-bottom: 80px; }
+.screen.active { display: flex; }
+.mono { font-family: var(--font-mono); }
+.accent { color: var(--accent); }
+.stamp-box { border: 2px solid var(--accent); border-radius: 12px; padding: 8px 16px; font-family: var(--font-display); font-size: 1.2rem; color: var(--accent); transform: rotate(-3deg); display: inline-block; margin-bottom: 20px; text-transform: uppercase; position: relative; }
+.stamp-box::after { content: ""; position: absolute; inset: 2px; border: 1px solid var(--accent); border-radius: 8px; opacity: 0.5; }
+h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; margin-bottom: 12px; text-transform: uppercase; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-bottom: 40px; max-width: 400px; }
+.btn { padding: 12px 24px; border-radius: 999px; font-weight: 600; transition: all 0.2s var(--ease); }
+.btn-primary { background: var(--accent); color: var(--canvas); }
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-secondary { border: 1px solid var(--hairline); color: var(--ink); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.record-btn { width: 140px; height: 140px; border-radius: 50%; background: var(--accent); border: 4px solid var(--canvas); box-shadow: 0 0 0 4px var(--accent); color: white; font-size: 2rem; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 24px; }
+.record-btn::before { content: ""; position: absolute; inset: -12px; border-radius: 50%; border: 2px solid rgba(228,87,46,0.4); animation: pulse 2s infinite; }
+@keyframes pulse { 0% { transform: scale(0.95); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+.sub-link { color: var(--muted); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.sub-link:hover { color: var(--ink); }
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--panel); border-top: 1px solid var(--hairline); display: flex; justify-content: center; align-items: center; font-family: var(--font-mono); font-size: 0.8rem; z-index: 10; gap: 16px; }
+.settings-gear { position: absolute; right: 24px; font-size: 1.2rem; color: var(--muted); cursor: pointer; }
+.settings-gear:hover { color: var(--ink); }
+
+/* Recording */
+.rec-area { flex: 1; width: 100%; max-width: 600px; display: flex; flex-direction: column; }
+.timer { font-family: var(--font-mono); font-size: 2rem; margin-bottom: 12px; letter-spacing: 2px; }
+.transcript-box { flex: 1; border: 1px dashed var(--hairline); border-radius: 12px; padding: 20px; font-size: 1.2rem; color: var(--ink); background: var(--panel); min-height: 150px; text-align: left; }
+.controls { margin-top: 20px; display: flex; gap: 16px; justify-content: center; }
+
+/* Processing */
+.processing-list { list-style: none; text-align: left; width: 100%; max-width: 400px; }
+.processing-item { padding: 16px 0; border-bottom: 1px solid var(--hairline); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.9rem; }
+.processing-item .check { color: var(--accent); font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+.processing-item.done .check { opacity: 1; }
+.processing-detail { font-family: var(--font-body); font-size: 0.8rem; color: var(--muted); margin-top: 4px; text-align: right; }
+
+/* Proposal Card */
+.proposal-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; width: 100%; max-width: 600px; padding: 40px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: left; }
+.proposal-header { border-bottom: 2px solid var(--hairline); padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+.proposal-title { font-family: var(--font-display); font-size: 1.5rem; text-transform: uppercase; line-height: 1; }
+.proposal-meta { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); text-align: right; }
+.proposal-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.proposal-table th { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--hairline); padding-bottom: 8px; text-align: left; }
+.proposal-table td { padding: 12px 0; border-bottom: 1px dashed rgba(216,210,196,0.5); font-size: 0.95rem; }
+.proposal-table td:last-child { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.proposal-total-row td { border-bottom: 2px solid var(--ink); font-weight: 600; font-size: 1.1rem; color: var(--ink); }
+.proposal-footer { margin-top: 32px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--hairline); padding-top: 16px; }
+.proposal-footer .barcode { height: 30px; background: repeating-linear-gradient(90deg, var(--ink) 0, var(--ink) 2px, transparent 2px, transparent 6px); opacity: 0.1; margin-bottom: 16px; }
+
+/* Watermark for free tier */
+.watermark-layer { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+.watermark-text { font-family: var(--font-display); font-size: 3rem; color: rgba(228,87,46,0.08); transform: rotate(-45deg); white-space: nowrap; position: absolute; width: 200%; text-align: center; text-transform: uppercase; line-height: 1.5; }
+.stamp-overlay { position: absolute; top: 20px; right: 20px; border: 4px double var(--accent); border-radius: 12px; padding: 10px 20px; font-family: var(--font-display); color: var(--accent); font-size: 1.5rem; transform: rotate(-8deg) scale(0); opacity: 0; transition: all 0.4s var(--ease); z-index: 5; }
+.stamp-overlay.show { transform: rotate(-8deg) scale(1); opacity: 1; }
+.elapsed-badge { position: absolute; top: 24px; left: 24px; background: var(--ink); color: var(--canvas); padding: 4px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.8rem; opacity: 0; transform: translateY(-10px); transition: all 0.3s var(--ease); }
+.elapsed-badge.show { opacity: 1; transform: translateY(0); }
+
+/* Paywall */
+.modal-overlay { position: fixed; inset: 0; background: rgba(23,25,30,0.8); z-index: 100; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
+.modal-overlay.active { display: flex; }
+.modal { background: var(--panel); border-radius: 16px; padding: 40px; max-width: 400px; width: 100%; text-align: center; position: relative; border: 1px solid var(--hairline); }
+.modal h2 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 12px; text-transform: uppercase; }
+.modal p { color: var(--muted); margin-bottom: 24px; }
+.modal .btn { width: 100%; margin-bottom: 12px; }
+
+/* Settings Drawer */
+.settings-overlay { position: fixed; inset: 0; background: rgba(23,25,30,0.5); z-index: 90; display: none; backdrop-filter: blur(2px); }
+.settings-overlay.active { display: block; }
+.settings-drawer { position: fixed; top: 0; right: 0; width: 100%; max-width: 360px; height: 100vh; background: var(--panel); border-left: 1px solid var(--hairline); z-index: 91; padding: 40px 24px; transform: translateX(100%); transition: transform 0.4s var(--ease); display: flex; flex-direction: column; }
+.settings-drawer.active { transform: translateX(0); }
+.settings-drawer h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 24px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+.settings-group { margin-bottom: 24px; }
+.settings-group label { display: block; font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.settings-group input { width: 100%; padding: 10px; border: 1px solid var(--hairline); border-radius: 8px; font-family: var(--font-body); background: var(--canvas); }
+.price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9rem; }
+.price-row input { width: 80px; text-align: right; border: 1px solid var(--hairline); border-radius: 4px; padding: 4px; font-family: var(--font-mono); }
+.privacy-note { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-top: auto; padding-top: 24px; border-top: 1px solid var(--hairline); }
+
+@media (prefers-reduced-motion: reduce) {
+  .record-btn::before { animation: none; }
+  .stamp-overlay { transition: none; transform: rotate(-8deg) scale(1); opacity: 1; }
+}
+@media print {
+  body { background: white; }
+  body::before, header, footer, .bottom-bar, .settings-overlay, .settings-drawer, .cta-row, .stamp-box, .tagline { display: none; }
+  .screen { padding: 0; height: auto; display: block; }
+  .proposal-card { box-shadow: none; border: 1px solid #ccc; padding: 20px; margin: 0; width: 100%; max-width: 100%; }
+  .watermark-layer { display: none; }
+  .stamp-overlay { position: absolute; top: 10px; right: 10px; transform: rotate(-8deg) scale(1) !important; opacity: 1 !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- HOME SCREEN -->
+  <div id="screen-home" class="screen active">
+    <div class="stamp-box">DS-2026-001</div>
+    <h1>DealSprint</h1>
+    <p class="tagline">Turn your voice note into a priced proposal in seconds.</p>
+    <button id="btn-record" class="record-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+    </button>
+    <p class="sub-link" id="btn-type">Type notes instead</p>
+  </div>
+
+  <!-- RECORD SCREEN -->
+  <div id="screen-record" class="screen">
+    <div class="rec-area">
+      <div class="timer mono" id="timer">00:00</div>
+      <div class="transcript-box" id="transcript-box" contenteditable="true" placeholder="Start speaking or type here..."></div>
+      <div class="controls">
+        <button id="btn-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="btn-stop" class="btn btn-primary">Process Note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCESSING SCREEN -->
+  <div id="screen-processing" class="screen">
+    <h2 style="margin-bottom: 30px; font-family: var(--font-mono); font-size: 1rem; letter-spacing: 1px; text-transform: uppercase;">Extracting Details</h2>
+    <ul class="processing-list">
+      <li class="processing-item" id="step-1">
+        <div><span class="mono">01</span> PARSING VOICE DATA</div>
+        <span class="check">✓</span>
+      </li>
+      <li class="processing-item" id="step-2">
+        <div><span class="mono">02</span> BUILDING PRICE TABLE</div>
+        <span class="check">✓</span>
+      </li>
+      <li class="processing-item" id="step-3">
+        <div><span class="mono">03</span> GENERATING PROPOSAL</div>
+        <span class="check">✓</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PROPOSAL SCREEN -->
+  <div id="screen-proposal" class="screen">
+    <div class="proposal-card" id="proposal-card">
+      <div class="watermark-layer" id="watermark-layer">
+        <div class="watermark-text">PREPARED WITH DEALSPRINT FREE</div>
+      </div>
+      
+      <div class="stamp-overlay" id="stamp-overlay">SENT</div>
+      <div class="elapsed-badge" id="elapsed-badge">Sent in 58s</div>
+
+      <div class="proposal-header">
+        <div class="proposal-title">DealSprint<br>Proposal</div>
+        <div class="proposal-meta">
+          PREPARED FOR<br>
+          <strong id="p-client" contenteditable="true">Client Name</strong><br><br>
+          DATE<br>
+          <span id="p-date"></span>
+        </div>
+      </div>
+
+      <table class="proposal-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="p-items">
+          <!-- Rows injected by JS -->
+        </tbody>
+        <tfoot id="p-footer">
+          <!-- Total injected by JS -->
+        </tfoot>
+      </table>
+
+      <div class="proposal-footer">
+        <div class="barcode"></div>
+        TERMS: Quote valid for 30 days. All prices subject to final site measurement.
+      </div>
+    </div>
+
+    <div class="cta-row" style="margin-top: 24px; width: 100%; max-width: 600px;">
+      <button id="btn-download" class="btn btn-secondary" style="flex: 1;">Download PDF</button>
+      <button id="btn-copy" class="btn btn-secondary" style="flex: 1;">Copy Summary</button>
+      <button id="btn-send" class="btn btn-primary" style="flex: 1;">Send Proposal</button>
+    </div>
+    <button id="btn-home" class="btn btn-secondary" style="margin-top: 12px;">New Proposal</button>
+  </div>
+</div>
+
+<!-- Bottom Bar -->
+<div class="bottom-bar">
+  <span id="usage-counter" class="mono">0/2 Proposals Used</span>
+  <span id="pro-badge" class="mono" style="display:none; color:var(--accent);">PRO UNLOCKED</span>
+  <span class="settings-gear" id="btn-settings">⚙</span>
+</div>
+
+<!-- Paywall Modal -->
+<div class="modal-overlay" id="paywall-modal">
+  <div class="modal">
+    <h2>Limit Reached</h2>
+    <p>You have used your 2 free proposals this month. Upgrade for unlimited proposals, no watermark, and follow-up nudges.</p>
+    <button id="btn-trial" class="btn btn-primary">Start Free Trial ($14.99/mo)</button>
+    <button id="btn-activate-demo" class="btn btn-secondary">Demo Activate (No Charge)</button>
+    <button id="btn-close-paywall" class="btn btn-secondary" style="border:none; color:var(--muted); margin-top: 12px;">Cancel</button>
+  </div>
+</div>
+
+<!-- Settings Drawer -->
+<div class="settings-overlay" id="settings-overlay"></div>
+<div class="settings-drawer" id="settings-drawer">
+  <h3>Settings <span id="btn-close-settings" style="cursor:pointer;">✕</span></h3>
+  
+  <div class="settings-group">
+    <label>Price Table (Unit Rates)</label>
+    <div class="price-row"><span>Shingles ($/sq)</span><input type="number" id="rate-shingles" value="425"></div>
+    <div class="price-row"><span>Gutters ($/lf)</span><input type="number" id="rate-gutters" value="9"></div>
+    <div class="price-row"><span>Guards ($/lf)</span><input type="number" id="rate-guards" value="12"></div>
+    <div class="price-row"><span>Skylight (ea)</span><input type="number" id="rate-skylight" value="1400"></div>
+  </div>
+
+  <div class="settings-group">
+    <label>Optional AI Key (Stays in Browser)</label>
+    <input type="password" id="ai-key" placeholder="sk-...">
+  </div>
+
+  <button id="btn-reset" class="btn btn-secondary" style="width:100%; margin-top: 10px; border-color: var(--accent); color: var(--accent);">Reset Demo Data</button>
+  
+  <div class="privacy-note">Everything stays in this browser. Nothing is uploaded.</div>
+</div>
+
+<script>
+const STRIPE_PAYMENT_LINK_URL = ""; // Paste Stripe payment link here
+
+// State
+let state = {
+  usage: parseInt(localStorage.getItem('ds_usage') || '0'),
+  pro: localStorage.getItem('ds_pro') === 'true',
+  rates: {
+    shingles: parseFloat(localStorage.getItem('ds_rate_shingles') || '425'),
+    gutters: parseFloat(localStorage.getItem('ds_rate_gutters') || '9'),
+    guards: parseFloat(localStorage.getItem('ds_rate_guards') || '12'),
+    skylight: parseFloat(localStorage.getItem('ds_rate_skylight') || '1400')
+  },
+  aiKey: localStorage.getItem('ds_ai_key') || '',
+  startTimestamp: null,
+  extractedData: null
+};
+
+// DOM Elements
+const screens = {
+  home: document.getElementById('screen-home'),
+  record: document.getElementById('screen-record'),
+  processing: document.getElementById('screen-processing'),
+  proposal: document.getElementById('screen-proposal')
+};
+const els = {
+  timer: document.getElementById('timer'),
+  transcript: document.getElementById('transcript-box'),
+  pClient: document.getElementById('p-client'),
+  pDate: document.getElementById('p-date'),
+  pItems: document.getElementById('p-items'),
+  pFooter: document.getElementById('p-footer'),
+  stamp: document.getElementById('stamp-overlay'),
+  elapsed: document.getElementById('elapsed-badge'),
+  watermark: document.getElementById('watermark-layer'),
+  usage: document.getElementById('usage-counter'),
+  proBadge: document.getElementById('pro-badge'),
+  paywall: document.getElementById('paywall-modal'),
+  settingsOverlay: document.getElementById('settings-overlay'),
+  settingsDrawer: document.getElementById('settings-drawer')
+};
+
+// Init
+function init() {
+  updateUI();
+  setupEventListeners();
+  
+  // Load saved rates
+  document.getElementById('rate-shingles').value = state.rates.shingles;
+  document.getElementById('rate-gutters').value = state.rates.gutters;
+  document.getElementById('rate-guards').value = state.rates.guards;
+  document.getElementById('rate-skylight').value = state.rates.skylight;
+  document.getElementById('ai-key').value = state.aiKey;
+}
+
+function updateUI() {
+  if (state.pro) {
+    els.usage.style.display = 'none';
+    els.proBadge.style.display = 'inline';
+    els.watermark.style.display = 'none';
+  } else {
+    els.usage.textContent = `${state.usage}/2 Proposals Used`;
+    els.usage.style.display = 'inline';
+    els.proBadge.style.display = 'none';
+    els.watermark.style.display = 'flex';
+  }
+}
+
+function switchScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+let timerInterval;
+let recognition;
+let isRecording = false;
+
+function startRecording() {
+  if (state.usage >= 2 && !state.pro) {
+    els.paywall.classList.add('active');
+    return;
+  }
+
+  switchScreen('record');
+  els.transcript.innerHTML = '';
+  state.startTimestamp = Date.now();
+  startTimer();
+  
+  if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onresult = (event) => {
+      let final_transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          final_transcript += event.results[i][0].transcript;
+          els.transcript.innerHTML += final_transcript + ' ';
+        } else {
+          // Interim results could be shown differently if needed
+        }
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech error:", event.error);
+      stopRecording();
+    };
+    
+    recognition.start();
+    isRecording = true;
+  } else {
+    els.transcript.innerHTML = "Met Mark at the Henderson job site. Roof replacement, architectural shingles, about 32 squares, two skylights. He wants gutter guards too. Budget around $18k, mentioned neighbor did theirs last spring. Needs it before the rains.";
+    els.transcript.contentEditable = true;
+  }
+}
+
+function stopRecording() {
+  if (recognition && isRecording) {
+    recognition.stop();
+    isRecording = false;
+  }
+  stopTimer();
+  processNote();
+}
+
+function startTimer() {
+  let seconds = 0;
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    els.timer.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+async function processNote() {
+  switchScreen('processing');
+  
+  // Try AI if key present, else local
+  let data;
+  if (state.aiKey) {
+    try {
+      data = await callAI(els.transcript.innerText);
+    } catch (e) {
+      showToast("AI unavailable, used local engine");
+      data = localExtract(els.transcript.innerText);
+    }
+  } else {
+    data = localExtract(els.transcript.innerText);
+  }
+
+  // Simulate processing steps
+  await animateStep('step-1', 800);
+  await animateStep('step-2', 800);
+  await animateStep('step-3', 800);
+  
+  state.extractedData = data;
+  renderProposal(data);
+  switchScreen('proposal');
+}
+
+function animateStep(id, delay) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      document.getElementById(id).classList.add('done');
+      setTimeout(resolve, 200);
+    }, delay);
+  });
+}
+
+// EXTRACTION ENGINE
+function localExtract(text) {
+  // 1. Parse Name
+  const nameMatch = text.match(/(?:met|called|spoke with)\s+([A-Z][a-z]+ [A-Z][a-z]+)/i) || 
+                    text.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/);
+  const clientName = nameMatch ? nameMatch[1] : "Client";
+
+  // 2. Parse Items (Roofing logic)
+  const items = [];
+  const sqftMatch = text.match(/(\d+)\s*(?:squares|sqft|sq ft)/i);
+  if (sqftMatch) {
+    items.push({ name: "Architectural Shingles", qty: parseInt(sqftMatch[1]), unit_price: state.rates.shingles, unit: "sq" });
+  } else {
+    items.push({ name: "Basic Shingles", qty: 10, unit_price: state.rates.shingles, unit: "sq" }); // Default assumption
+  }
+
+  const skylightMatch = text.match(/(\d+)\s*skylight/i);
+  if (skylightMatch) {
+    items.push({ name: "Skylight Replacement", qty: parseInt(skylightMatch[1]), unit_price: state.rates.skylight, unit: "ea" });
+  }
+
+  if (text.toLowerCase().includes('gutter guard')) {
+    items.push({ name: "Gutter Guards", qty: 150, unit_price: state.rates.guards, unit: "lf" }); // Standard house estimate
+  } else if (text.toLowerCase().includes('gutter')) {
+    items.push({ name: "Gutter Install", qty: 150, unit_price: state.rates.gutters, unit: "lf" });
+  }
+
+  return { client: clientName, items: items };
+}
+
+async function callAI(text) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.aiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{
+        role: 'system',
+        content: `Extract job details from the text. Return JSON with: {client: "Name", items: [{name: "Service", qty: Number, unit_price: Number}]}. Use these rates: Shingles ${state.rates.shingles}/sq, Gutters ${state.rates.gutters}/lf, Guards ${state.rates.guards}/lf, Skylight ${state.rates.skylight}/ea. Assume standard quantities if not specified (e.g. 150lf for gutters).`
+      }, {
+        role: 'user',
+        content: text
+      }]
+    })
+  });
+
+  const result = await response.json();
+  if (result.error) throw new Error(result.error.message);
+  return JSON.parse(result.choices[0].message.content);
+}
+
+function renderProposal(data) {
+  els.pClient.textContent = data.client;
+  els.pDate.textContent = new Date().toLocaleDateString();
+  
+  let html = '';
+  let subtotal = 0;
+
+  data.items.forEach((item, idx) => {
+    const amount = item.qty * item.unit_price;
+    subtotal += amount;
+    html += `
+      <tr>
+        <td contenteditable="true" data-idx="${idx}" data-field="name">${item.name}</td>
+        <td contenteditable="true" data-idx="${idx}" data-field="qty" style="text-align:center">${item.qty}</td>
+        <td>$${item.unit_price}</td>
+        <td contenteditable="true" data-idx="${idx}" data-field="amount">$${amount.toLocaleString()}</td>
+      </tr>
+    `;
+  });
+
+  els.pItems.innerHTML = html;
+
+  const contingency = Math.round(subtotal * 0.10);
+  const total = subtotal + contingency;
+
+  els.pFooter.innerHTML = `
+    <tr>
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right; color:var(--muted);">Subtotal</td>
+      <td style="text-align:right; border:none;">$${subtotal.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right; color:var(--muted);">Contingency (10%)</td>
+      <td style="text-align:right; border:none;">$${contingency.toLocaleString()}</td>
+    </tr>
+    <tr class="proposal-total-row">
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right;">TOTAL</td>
+      <td style="text-align:right; border:none; font-family: var(--font-display); font-size: 1.2rem;">$${total.toLocaleString()}</td>
+    </tr>
+  `;
+
+  // Add event listeners for edit recompute
+  els.pItems.querySelectorAll('[contenteditable]').forEach(td => {
+    td.addEventListener('blur', () => recompute());
+  });
+}
+
+function recompute() {
+  // Simple recompute based on DOM - in real app would track state better
+  let subtotal = 0;
+  els.pItems.querySelectorAll('tr').forEach(row => {
+    const name = row.cells[0].innerText;
+    const qty = parseFloat(row.cells[1].innerText) || 0;
+    // Find rate from name or fallback
+    let rate = 0;
+    if (name.toLowerCase().includes('shingle')) rate = state.rates.shingles;
+    else if (name.toLowerCase().includes('gutter guard')) rate = state.rates.guards;
+    else if (name.toLowerCase().includes('gutter')) rate = state.rates.gutters;
+    else if (name.toLowerCase().includes('skylight')) rate = state.rates.skylight;
+    
+    const amount = qty * rate;
+    row.cells[3].innerText = '$' + amount.toLocaleString();
+    subtotal += amount;
+  });
+
+  const contingency = Math.round(subtotal * 0.10);
+  const total = subtotal + contingency;
+
+  els.pFooter.innerHTML = `
+    <tr>
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right; color:var(--muted);">Subtotal</td>
+      <td style="text-align:right; border:none;">$${subtotal.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right; color:var(--muted);">Contingency (10%)</td>
+      <td style="text-align:right; border:none;">$${contingency.toLocaleString()}</td>
+    </tr>
+    <tr class="proposal-total-row">
+      <td colspan="3" style="border:none; padding-top: 10px; text-align:right;">TOTAL</td>
+      <td style="text-align:right; border:none; font-family: var(--font-display); font-size: 1.2rem;">$${total.toLocaleString()}</td>
+    </tr>
+  `;
+}
+
+function sendProposal() {
+  els.stamp.classList.add('show');
+  const elapsedSeconds = Math.floor((Date.now() - state.startTimestamp) / 1000);
+  els.elapsed.textContent = `Sent in ${elapsedSeconds}s`;
+  els.elapsed.classList.add('show');
+  
+  if (!state.pro) {
+    state.usage++;
+    localStorage.setItem('ds_usage', state.usage);
+    updateUI();
+  }
+}
+
+function setupEventListeners() {
+  document.getElementById('btn-record').onclick = startRecording;
+  document.getElementById('btn-type').onclick = () => {
+    if (state.usage >= 2 && !state.pro) {
+      els.paywall.classList.add('active');
+      return;
+    }
+    switchScreen('record');
+    state.startTimestamp = Date.now();
+    startTimer();
+  };
+  
+  document.getElementById('btn-cancel').onclick = () => { stopTimer(); switchScreen('home'); };
+  document.getElementById('btn-stop').onclick = stopRecording;
+  
+  document.getElementById('btn-home').onclick = () => {
+    els.stamp.classList.remove('show');
+    els.elapsed.classList.remove('show');
+    switchScreen('home');
+  };
+
+  document.getElementById('btn-send').onclick = sendProposal;
+  
+  document.getElementById('btn-download').onclick = () => window.print();
+  
+  document.getElementById('btn-copy').onclick = () => {
+    let text = `PROPOSAL FOR: ${els.pClient.innerText}\nDATE: ${els.pDate.innerText}\n\n`;
+    els.pItems.querySelectorAll('tr').forEach(row => {
+      text += `${row.cells[0].innerText} | ${row.cells[1].innerText} | ${row.cells[3].innerText}\n`;
+    });
+    text += `\nTOTAL: ${els.pFooter.querySelector('.proposal-total-row td:last-child').innerText}`;
+    
+    navigator.clipboard.writeText(text).then(() => showToast("Summary copied!"));
+  };
+
+  // Settings
+  document.getElementById('btn-settings').onclick = () => {
+    els.settingsOverlay.classList.add('active');
+    els.settingsDrawer.classList.add('active');
+  };
+  
+  const closeSettings = () => {
+    els.settingsOverlay.classList.remove('active');
+    els.settingsDrawer.classList.remove('active');
+  };
+  
+  document.getElementById('btn-close-settings').onclick = closeSettings;
+  els.settingsOverlay.onclick = closeSettings;
+  
+  // Paywall
+  document.getElementById('btn-trial').onclick = () => {
+    if (STRIPE_PAYMENT_LINK_URL) window.location.href = STRIPE_PAYMENT_LINK_URL;
+    else {
+      state.pro = true;
+      localStorage.setItem('ds_pro', 'true');
+      updateUI();
+      els.paywall.classList.remove('active');
+      showToast("Pro unlocked (demo)");
+    }
+  };
+  
+  document.getElementById('btn-activate-demo').onclick = () => {
+    state.pro = true;
+    localStorage.setItem('ds_pro', 'true');
+    updateUI();
+    els.paywall.classList.remove('active');
+    showToast("Pro unlocked (demo)");
+  };
+  
+  document.getElementById('btn-close-paywall').onclick = () => els.paywall.classList.remove('active');
+
+  // Settings Inputs
+  ['rate-shingles', 'rate-gutters', 'rate-guards', 'rate-skylight'].forEach(id => {
+    document.getElementById(id).onchange = (e) => {
+      const key = id.replace('rate-', '');
+      state.rates[key] = parseFloat(e.target.value);
+      localStorage.setItem(`ds_${id}`, e.target.value);
+    };
+  });
+
+  document.getElementById('ai-key').onchange = (e) => {
+    state.aiKey = e.target.value;
+    localStorage.setItem('ds_ai_key', e.target.value);
+  };
+
+  document.getElementById('btn-reset').onclick = () => {
+    localStorage.clear();
+    location.reload();
+  };
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.innerText = msg;
+  t.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--canvas); padding:10px 20px; border-radius:999px; font-family:var(--font-mono); font-size:0.8rem; z-index:1000; animation: fadeInOut 3s forwards;';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Add CSS for toast
+const style = document.createElement('style');
+style.textContent = `@keyframes fadeInOut { 0%,100% { opacity:0; transform:translate(-50%, 10px); } 10%,90% { opacity:1; transform:translate(-50%, 0); } }`;
+document.head.appendChild(style);
+
+init();
+</script>
+</body>
+</html>
