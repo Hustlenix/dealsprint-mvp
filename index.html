@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DealSprint: Handshake to proposal in under sixty seconds</title>
+<meta name="description" content="Shipaton 2026 entry. An app that turns a field rep's voice note into a branded, tracked sales proposal in under sixty seconds.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230C1418'/><path d='M9 22V10h5.5c3 0 4.8 2.2 4.8 6s-1.8 6-4.8 6H9z' fill='%23C8A15E'/></svg>">
+<style>
+:root{
+  --canvas:#0C1418;
+  --panel:#111C22;
+  --line:#20313A;
+  --ink:#E9EEF1;
+  --dim:#93A6B0;
+  --brass:#C8A15E;
+  --brass-dim:rgba(200,161,94,.14);
+  --green:#5FB57D;
+  --red:#D07A6E;
+  --font-display:"Fraunces",Georgia,serif;
+  --font-body:"Instrument Sans","Segoe UI",sans-serif;
+  --font-mono:"Spline Sans Mono",Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background:var(--canvas);color:var(--ink);font-family:var(--font-body);line-height:1.55;overflow-x:hidden}
+::selection{background:var(--brass);color:var(--canvas)}
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+.mono{font-family:var(--font-mono)}
+.eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
+section{padding:88px 0;border-top:1px solid var(--line)}
+h2{font-family:var(--font-display);font-weight:600;font-size:clamp(1.7rem,3.6vw,2.5rem);margin:10px 0 28px;letter-spacing:-.01em}
+.lede{color:var(--dim);font-size:1.06rem;max-width:720px}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.rv{opacity:1;transform:none;transition:none}}
+
+/* header */
+header{position:sticky;top:0;z-index:50;background:rgba(12,20,24,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:58px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:.85rem;letter-spacing:.08em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--brass);box-shadow:0 0 12px var(--brass)}
+.nav a.lnk{color:var(--dim);text-decoration:none;font-size:.85rem;margin-left:18px}
+.nav a.lnk:hover{color:var(--ink)}
+
+/* hero */
+.hero{padding:110px 0 90px;border-top:none}
+.hero h1{font-family:var(--font-display);font-weight:600;font-size:clamp(2.6rem,6.5vw,4.6rem);line-height:1.04;letter-spacing:-.02em;margin:18px 0 20px}
+.hero h1 em{font-style:normal;color:var(--brass)}
+.hero p.sub{color:var(--dim);font-size:1.12rem;max-width:640px}
+.tmpl{margin-top:44px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.tmpl-row{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--line)}
+.tmpl-row:last-child{border-bottom:none}
+.tmpl-k{padding:16px 18px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);border-right:1px solid var(--line);display:flex;align-items:center}
+.tmpl-v{padding:16px 20px;font-size:1rem}
+.tmpl-v b{color:var(--ink)} .tmpl-v span{color:var(--dim)}
+.cta-row{margin-top:36px;display:flex;gap:14px;flex-wrap:wrap}
+.btn{display:inline-block;padding:13px 26px;border-radius:999px;text-decoration:none;font-weight:600;font-size:.95rem}
+.btn.brass{background:var(--brass);color:var(--canvas)}
+.btn.brass:hover{filter:brightness(1.08)}
+.btn.ghost{border:1px solid var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--brass);color:var(--brass)}
+.deadline{margin-top:26px;font-family:var(--font-mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em}
+.deadline b{color:var(--ink)}
+
+/* grid cards */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid.two{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;transition:border-color .25s ease,transform .25s ease}
+.card:hover{border-color:var(--brass);transform:translateY(-2px)}
+.card .num{font-family:var(--font-mono);font-size:.72rem;color:var(--brass);letter-spacing:.14em}
+.card h3{font-family:var(--font-display);font-weight:600;font-size:1.15rem;margin:8px 0 8px}
+.card p{color:var(--dim);font-size:.92rem}
+
+/* loop */
+.loop{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.step{flex:1 1 120px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:.85rem;color:var(--dim);position:relative}
+.step b{display:block;color:var(--ink);font-size:.95rem;margin-bottom:4px}
+.step .n{position:absolute;top:-10px;left:14px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-family:var(--font-mono);font-size:.68rem;color:var(--brass)}
+
+/* verdict */
+.verdict-badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--brass);border-radius:999px;padding:9px 20px;font-family:var(--font-mono);font-size:.82rem;letter-spacing:.1em;color:var(--brass);background:var(--brass-dim)}
+.lenses{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+.lens{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:12px;padding:18px}
+.lens h4{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin-bottom:8px}
+.lens p{color:var(--dim);font-size:.9rem}
+.pu{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.pu .card h4{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
+.pu .yes h4{color:var(--green)} .pu .no h4{color:var(--red)}
+.pu ul{list-style:none}
+.pu li{padding:6px 0 6px 22px;position:relative;color:var(--dim);font-size:.92rem;border-bottom:1px dashed rgba(32,49,58,.6)}
+.pu li:last-child{border-bottom:none}
+.yes li:before{content:"+";position:absolute;left:2px;color:var(--green);font-weight:700}
+.no li:before{content:"?";position:absolute;left:4px;color:var(--red);font-weight:700}
+
+/* gate */
+.gate{border:1px solid var(--brass);border-radius:16px;background:linear-gradient(180deg,var(--brass-dim),transparent 70%),var(--panel);padding:34px}
+.gate h2{margin-top:6px}
+.gate-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
+.gstep{border:1px solid var(--line);border-radius:12px;padding:18px;background:rgba(12,20,24,.5)}
+.gstep .k{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;color:var(--brass)}
+.gstep p{color:var(--dim);font-size:.9rem;margin-top:6px}
+.bars{display:flex;gap:14px;flex-wrap:wrap}
+.bar{flex:1 1 260px;border-radius:12px;padding:18px;border:1px solid var(--line)}
+.bar.pass{border-color:rgba(95,181,125,.5)} .bar.fail{border-color:rgba(208,122,110,.5)}
+.bar .t{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.08em}
+.bar.pass .t{color:var(--green)} .bar.fail .t{color:var(--red)}
+.bar p{color:var(--dim);font-size:.9rem;margin-top:6px}
+.killrule{margin-top:20px;font-family:var(--font-mono);font-size:.78rem;color:var(--red);letter-spacing:.03em}
+
+/* awards table */
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:13px 12px;border-bottom:1px solid rgba(32,49,58,.6);color:var(--dim);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.amt{font-family:var(--font-mono);color:var(--ink);white-space:nowrap}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.08em;border-radius:999px;padding:2px 10px;border:1px solid var(--line);color:var(--dim)}
+.tag.hi{border-color:rgba(95,181,125,.5);color:var(--green)}
+.tag.md{border-color:rgba(200,161,94,.5);color:var(--brass)}
+.tag.lo{opacity:.75}
+
+/* weeks */
+.weeks{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.week{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.week .w{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;color:var(--brass)}
+.week h4{font-size:.98rem;margin:6px 0}
+.week p{color:var(--dim);font-size:.82rem}
+.week.hot{border-color:var(--brass)}
+
+/* stack + compliance */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:8px 18px;font-family:var(--font-mono);font-size:.78rem;color:var(--dim)}
+.check{list-style:none;columns:2;column-gap:30px}
+.check li{break-inside:avoid;padding:9px 0 9px 30px;position:relative;color:var(--dim);font-size:.95rem;border-bottom:1px dashed rgba(32,49,58,.6)}
+.check li:before{content:"[ ]";position:absolute;left:0;top:9px;font-family:var(--font-mono);color:var(--brass)}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:40px 0 60px}
+.f-base{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;font-family:var(--font-mono);font-size:.74rem;color:var(--dim);letter-spacing:.05em}
+.build-tag{color:var(--brass)}
+.f-links a{color:var(--dim);text-decoration:none;margin-left:18px}
+.f-links a:hover{color:var(--brass)}
+
+@media(max-width:900px){
+  .grid,.lenses,.gate-steps{grid-template-columns:1fr 1fr}
+  .weeks{grid-template-columns:1fr 1fr}
+  .tmpl-row{grid-template-columns:1fr}
+  .tmpl-k{border-right:none;border-bottom:1px dashed var(--line)}
+  .check{columns:1}
+  section{padding:64px 0}
+}
+@media(max-width:600px){
+  .grid,.grid.two,.lenses,.gate-steps,.weeks,.pu{grid-template-columns:1fr}
+  .nav a.lnk{margin-left:12px;font-size:.78rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand"><span class="dot"></span> DEALSPRINT</div>
+    <nav>
+      <a class="lnk" href="#problem">Problem</a>
+      <a class="lnk" href="#features">Features</a>
+      <a class="lnk" href="#validation">Validation</a>
+      <a class="lnk" href="#gate">Go Gate</a>
+      <a class="lnk" href="#plan">Plan</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow rv">RevenueCat Shipaton 2026 entry · $740k prize pool · deadline Sept 30</div>
+    <h1 class="rv">Handshake to sent proposal<br>in <em>sixty seconds.</em></h1>
+    <p class="sub rv">DealSprint turns a field rep's ninety-second voice note into a branded, tracked, client-ready sales proposal. Built in the gap where deals die.</p>
+
+    <div class="tmpl rv">
+      <div class="tmpl-row">
+        <div class="tmpl-k">We are building</div>
+        <div class="tmpl-v"><b>An app that converts a voice note into a polished proposal in under 60 seconds,</b> <span>with tap-to-edit trust controls, AI follow-up nudges based on what the client viewed, and open alerts.</span></div>
+      </div>
+      <div class="tmpl-row">
+        <div class="tmpl-k">To solve</div>
+        <div class="tmpl-v"><b>The dead zone between the handshake and the proposal.</b> <span>Reps close verbally on-site, then burn two hours at a desk rebuilding a Word template. By tomorrow the buying temperature has dropped.</span></div>
+      </div>
+      <div class="tmpl-row">
+        <div class="tmpl-k">For these users</div>
+        <div class="tmpl-v"><b>Solo field closers:</b> <span>HVAC estimators, solar surveyors, roofers, painters, med-device and insurance reps. No RevOps team, no approval bottleneck, working from their truck.</span></div>
+      </div>
+    </div>
+
+    <div class="cta-row rv">
+      <a class="btn brass" href="#validation">See the validation</a>
+      <a class="btn ghost" href="#plan">View the five-week plan</a>
+    </div>
+    <p class="deadline rv">Internal deadlines: store live <b>Sept 22</b> · video locked <b>Sept 26</b> · submitted <b>Sept 28</b></p>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="eyebrow rv">01 · The problem</div>
+    <h2 class="rv">Deals die in the gap between yes and sent.</h2>
+    <p class="lede rv">Field reps close the job verbally, hear "sounds good, send me something," then lose the evening to paperwork and lose the deal to delay. Incumbents ignore the moment entirely.</p>
+    <div class="grid rv" style="margin-top:30px">
+      <div class="card"><div class="num">INCUMBENTS</div><h3>PandaDoc, Qwilr, Proposify</h3><p>Desk-first suites bought by procurement. E-sign, CRM sync, templates. None of it works from a truck ninety seconds after the meeting.</p></div>
+      <div class="card"><div class="num">DEFAULT BEHAVIOR</div><h3>Paste notes into ChatGPT</h3><p>Free drafting, but no branding, no pricing tables, no tracking, no send workflow. Reps will not trust-send raw AI output anyway.</p></div>
+      <div class="card"><div class="num">THE COST</div><h3>Two hours tonight, deal lost tomorrow</h3><p>Speed-to-proposal decides commissions. Whoever sends a real proposal today wins the signature, not whoever sends Thursday.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="users">
+  <div class="wrap">
+    <div class="eyebrow rv">02 · For these users</div>
+    <h2 class="rv">Solo closers with no desk and no boss.</h2>
+    <p class="lede rv">We target reps who own the whole sale: estimate, close, paper, collect. No manager exists to ban AI-assisted drafting, and every hour of paperwork is an hour not selling.</p>
+    <div class="chips rv" style="margin-top:28px">
+      <span class="chip">HVAC estimators</span><span class="chip">Solar surveyors</span><span class="chip">Roofers</span><span class="chip">Commercial painters</span><span class="chip">Med-device reps</span><span class="chip">Insurance agents</span><span class="chip">Solo consultants</span>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow rv">03 · The feature set</div>
+    <h2 class="rv">Seven pieces. Nothing more ships in v1.</h2>
+    <div class="grid">
+      <div class="card rv"><div class="num">F1</div><h3>Capture</h3><p>Hold-to-talk voice note or typed bullets plus four fields: client, job type, budget range, timeline.</p></div>
+      <div class="card rv"><div class="num">F2</div><h3>Generate</h3><p>AI structures notes into cover, approach, itemized pricing, timeline, next steps. Under sixty seconds end to end. Industry templates included.</p></div>
+      <div class="card rv"><div class="num">F3</div><h3>Trust-edit layer</h3><p>Tap any line to rewrite tone, adjust prices, attach photos. Reps review every word before send, ten times faster than Word.</p></div>
+      <div class="card rv"><div class="num">F4</div><h3>Deliver, hosted first</h3><p>Branded share link shows opens and which sections held attention longest. PDF export stays secondary.</p></div>
+      <div class="card rv"><div class="num">F5</div><h3>Follow-up engine</h3><p>Day-three nudge drafted from viewing behavior and delivered by push. Follow-up speed decides signatures.</p></div>
+      <div class="card rv"><div class="num">F6</div><h3>Paywall</h3><p>Free: two proposals monthly, watermarked. Pro at $14.99/month via RevenueCat, seven-day trial, unlimited and unbranded.</p></div>
+      <div class="card rv"><div class="num">F7</div><h3>Referral hook</h3><p>"Made with DealSprint" footer on free documents lands mid-pitch in front of exactly one more seller.</p></div>
+      <div class="card rv" style="border-style:dashed"><div class="num" style="color:var(--red)">CUT LIST</div><h3>Explicitly out of v1</h3><p>E-signature, CRM sync, team seats, web app, Android, offline mode. Scope discipline is the survival skill here.</p></div>
+      <div class="card rv" style="border-style:dashed"><div class="num" style="color:var(--red)">OUT OF AUDIENCE</div><h3>Sales orgs, deliberately</h3><p>Procurement cycles run 60 to 120 days. We do not have them. Org buyers come after product-market proof.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow rv">04 · Core loop</div>
+    <h2 class="rv">One ritual, seven steps.</h2>
+    <div class="loop rv">
+      <div class="step"><span class="n">1</span><b>Open in truck</b>Ninety seconds after leaving the client.</div>
+      <div class="step"><span class="n">2</span><b>Record</b>Talk through the job like telling a colleague.</div>
+      <div class="step"><span class="n">3</span><b>Edit</b>Two minutes of taps, not an evening of Word.</div>
+      <div class="step"><span class="n">4</span><b>Send link</b>Branded, tracked, live before the engine starts.</div>
+      <div class="step"><span class="n">5</span><b>Get alerted</b>Opened. Which sections held. How long.</div>
+      <div class="step"><span class="n">6</span><b>Follow up</b>AI drafts day-three message from view data.</div>
+      <div class="step"><span class="n">7</span><b>Win, repeat</b>Closed deal pays for twenty years of Pro.</div>
+    </div>
+  </div>
+</section>
+
+<section id="validation">
+  <div class="wrap">
+    <div class="eyebrow rv">05 · Validation</div>
+    <h2 class="rv">Four-agent council. Two hearings. One honest verdict.</h2>
+    <div class="verdict-badge rv">VERDICT: FIX FIRST · judged twice on Aug 24</div>
+    <div class="lenses">
+      <div class="lens rv"><h4>Believer</h4><p>Nobody owns the truck moment. Whisper-class speech recognition plus structured LLM extraction finally makes rambling voice notes into dependable priced documents.</p></div>
+      <div class="lens rv"><h4>Skeptic</h4><p>Reps adopt nothing without trust, orgs ban AI pricing, ChatGPT reproduces half of it for free. Dwell analytics dies if the document leaves as a raw PDF.</p></div>
+      <div class="lens rv"><h4>Investor</h4><p>Realistic pre-deadline ceiling is category money, around $225 to $675 MRR. Grand-prize traction needs breakout growth we cannot assume. Prove willingness to pay first.</p></div>
+    </div>
+    <div class="pu">
+      <div class="card yes rv"><h4>Proven</h4><ul>
+        <li>The pain: same-day turnaround wins deals</li>
+        <li>The wedge: mobile-only field workers unserved by desk-first incumbents</li>
+        <li>Tech feasibility crossed the quality bar</li>
+        <li>Contest fit: category awards pay craft and journey without breakout traction</li>
+      </ul></div>
+      <div class="card no rv"><h4>Unproven</h4><ul>
+        <li>Willingness to pay $14.99 monthly</li>
+        <li>Usage frequency high enough for retention stories</li>
+        <li>Whether AI-drafted pricing survives the rep's own review</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="gate">
+  <div class="wrap">
+    <div class="gate rv">
+      <div class="eyebrow">06 · Go / no-go gate</div>
+      <h2>No feature code until forty people vote with money.</h2>
+      <div class="gate-steps">
+        <div class="gstep"><div class="k">TODAY</div><p>Send 10 direct messages in r/solar, r/HVAC, r/electricians and field-sales LinkedIn groups.</p></div>
+        <div class="gstep"><div class="k">THIS WEEK</div><p>Build to 40 total. Offer: "$19 flat, send your messy deal notes tonight, get a branded proposal PDF tomorrow."</p></div>
+        <div class="gstep"><div class="k">SEPT 1</div><p>Decision day. Count paid orders, not compliments. The stack survives either outcome.</p></div>
+      </div>
+      <div class="bars">
+        <div class="bar pass"><div class="t">8 OR MORE PAID ORDERS</div><p>Build the full spec as written. Demand confirmed.</p></div>
+        <div class="bar fail"><div class="t">FEWER THAN 3 PAID ORDERS</div><p>Keep RevenueCat, the AI pipeline and paywall. Pivot surface to high-frequency docs: quotes, invoices, contracts for freelancers.</p></div>
+      </div>
+      <p class="killrule">Standing judge rule: a third council hearing with this test still unrun converts the verdict to KILL.</p>
+    </div>
+  </div>
+</section>
+
+<section id="prizes">
+  <div class="wrap">
+    <div class="eyebrow rv">07 · Prize strategy</div>
+    <h2 class="rv">Enter once. Compete for everything.</h2>
+    <p class="lede rv" style="margin-bottom:26px">One Devpost submission stays eligible for the grand prize plus every category it qualifies for. Category awards pay craft and journey, which we control completely, even when traction is modest.</p>
+    <div class="card rv" style="padding:0;overflow-x:auto">
+      <table>
+        <tr><th>Award</th><th>First place</th><th>Our angle</th><th>In our control</th></tr>
+        <tr><td>#BuildInPublic</td><td class="amt">$30,000 + NYC</td><td>Four-plus posts weekly from day one. Screen recordings of the sixty-second generation are inherently shareable.</td><td><span class="tag hi">Total</span></td></tr>
+        <tr><td>OneSignal retention</td><td class="amt">$25,000</td><td>Open alerts plus dwell-based follow-ups tie the return loop to money moments. Week-two return target: 35 percent.</td><td><span class="tag md">High</span></td></tr>
+        <tr><td>HAMM monetization</td><td class="amt">$20,000</td><td>Value-first paywall shown after the first proposal renders. Trial-to-paid craft with real numbers on Devpost.</td><td><span class="tag hi">Total</span></td></tr>
+        <tr><td>Grand prize</td><td class="amt">$100,000</td><td>Growth story from the evidence log. Realistic ceiling here is category money unless launch pops.</td><td><span class="tag lo">Low</span></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="plan">
+  <div class="wrap">
+    <div class="eyebrow rv">08 · Five-week execution</div>
+    <h2 class="rv">Thirty-seven days, mapped.</h2>
+    <div class="weeks">
+      <div class="week hot rv"><div class="w">WK 1 · AUG 24-30</div><h4>Prove demand</h4><p>DMs out day one. Devpost registered. Design system. Capture and generate working. First public post.</p></div>
+      <div class="week rv"><div class="w">WK 2 · AUG 31-SEP 6</div><h4>Wire the loop</h4><p>End-to-end generation, RevenueCat live, internal beta. Sept 1: go or pivot decision.</p></div>
+      <div class="week rv"><div class="w">WK 3 · SEP 7-13</div><h4>Beta out</h4><p>TestFlight build. Follow-up engine shipped. Posting cadence locked at four weekly.</p></div>
+      <div class="week rv"><div class="w">WK 4 · SEP 14-20</div><h4>Real users</h4><p>Paywall tuned from real behavior. Feedback shipped visibly. Growth evidence accumulates.</p></div>
+      <div class="week hot rv"><div class="w">WK 5 · SEP 21-30</div><h4>Ship and submit</h4><p>Store live Sept 22. Video locked Sept 26. Submitted Sept 28, never the last night.</p></div>
+    </div>
+    <div style="margin-top:34px" class="rv">
+      <div class="eyebrow" style="margin-bottom:14px">Stack</div>
+      <div class="chips">
+        <span class="chip">Expo React Native + TypeScript</span><span class="chip">Supabase</span><span class="chip">OpenAI API</span><span class="chip">RevenueCat SDK</span><span class="chip">Hosted HTML to PDF</span><span class="chip">PostHog</span>
+      </div>
+    </div>
+    <div style="margin-top:34px" class="rv">
+      <div class="eyebrow" style="margin-bottom:14px">Compliance checklist, disqualifiers if missed</div>
+      <ul class="check">
+        <li>Brand-new app first published inside Aug 1 to Sept 30 window</li>
+        <li>RevenueCat SDK powers a real purchase</li>
+        <li>Seven-day free trial enabled</li>
+        <li>Demo video under two minutes, leads with payoff and paywall</li>
+        <li>Devpost description, icon, screenshots, store URL complete</li>
+        <li>Apple and Google developer accounts active immediately</li>
+      </ul>
+    </div>
+    <div style="margin-top:34px" class="rv">
+      <div class="eyebrow" style="margin-bottom:14px">Evidence log format, starts today</div>
+      <div class="card" style="font-family:var(--font-mono);font-size:.82rem;color:var(--dim)">date | event | number | source &nbsp;&nbsp;<span style="color:var(--brass)">downloads · signups · trials · payers · churn · feedback shipped · mentions</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap f-base">
+    <span>DEALSPRINT · SHIPATON 2026 · TEAM OF SEVEN</span>
+    <span class="build-tag" id="buildTag">BUILD 1</span>
+    <span class="f-links"><a href="#problem">Top</a><a href="#gate">Go gate</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var els=document.querySelectorAll(".rv");
+  if(!("IntersectionObserver" in window)){els.forEach(function(e){e.classList.add("in")});return;}
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add("in");io.unobserve(en.target);}});
+  },{threshold:.12});
+  els.forEach(function(e){io.observe(e)});
+})();
+</script>
+</body>
+</html>
