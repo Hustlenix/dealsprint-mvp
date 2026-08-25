@@ -53,6 +53,7 @@ h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-h
 .rec-area { flex: 1; width: 100%; max-width: 600px; display: flex; flex-direction: column; }
 .timer { font-family: var(--font-mono); font-size: 2rem; margin-bottom: 12px; letter-spacing: 2px; }
 .transcript-box { flex: 1; border: 1px dashed var(--hairline); border-radius: 12px; padding: 20px; font-size: 1.2rem; color: var(--ink); background: var(--panel); min-height: 150px; text-align: left; }
+.transcript-box:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
 .controls { margin-top: 20px; display: flex; gap: 16px; justify-content: center; }
 
 /* Processing */
@@ -136,7 +137,7 @@ h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-h
   <div id="screen-record" class="screen">
     <div class="rec-area">
       <div class="timer mono" id="timer">00:00</div>
-      <div class="transcript-box" id="transcript-box" contenteditable="true" placeholder="Start speaking or type here..."></div>
+      <div class="transcript-box" id="transcript-box" contenteditable="true" data-placeholder="Type deal notes here, or go back and press Record to speak."></div>
       <div class="controls">
         <button id="btn-cancel" class="btn btn-secondary">Cancel</button>
         <button id="btn-stop" class="btn btn-primary">Process Note</button>
@@ -229,6 +230,7 @@ h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-h
     <p>You have used your 2 free proposals this month. Upgrade for unlimited proposals, no watermark, and follow-up nudges.</p>
     <button id="btn-trial" class="btn btn-primary">Start Free Trial ($14.99/mo)</button>
     <button id="btn-activate-demo" class="btn btn-secondary">Demo Activate (No Charge)</button>
+    <div class="mono" id="pay-status" style="font-size:.65rem; color:var(--muted); margin-top:8px; letter-spacing:.5px;"></div>
     <button id="btn-close-paywall" class="btn btn-secondary" style="border:none; color:var(--muted); margin-top: 12px;">Cancel</button>
   </div>
 </div>
@@ -247,6 +249,12 @@ h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-h
   </div>
 
   <div class="settings-group">
+    <label>Stripe Payment Link (Real Checkout)</label>
+    <input type="url" id="pay-link" placeholder="https://buy.stripe.com/...">
+    <div class="privacy-note" style="border:none; padding-top:8px;">Create one free at dashboard.stripe.com under Payment Links. In the link settings, set the after-payment redirect to this page followed by ?payment=success so the app can grant Pro on return.</div>
+  </div>
+
+  <div class="settings-group">
     <label>Optional AI Key (Stays in Browser)</label>
     <input type="password" id="ai-key" placeholder="sk-...">
   </div>
@@ -257,7 +265,12 @@ h1 { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3rem); line-h
 </div>
 
 <script>
-const STRIPE_PAYMENT_LINK_URL = ""; // Paste Stripe payment link here
+// Payments: paste your live Stripe Payment Link here at deploy time to bake it in,
+// or leave empty and paste a link in Settings at runtime (stored in this browser only).
+// The link must have its after-payment redirect set to this page + ?payment=success
+// so the return handler below can grant Pro on return. Real entitlement verification against
+// Stripe comes with the backend phase; for now the return parameter is the trigger.
+const STRIPE_PAYMENT_LINK_URL = "";
 
 // State
 let state = {
@@ -270,6 +283,7 @@ let state = {
     skylight: parseFloat(localStorage.getItem('ds_rate_skylight') || '1400')
   },
   aiKey: localStorage.getItem('ds_ai_key') || '',
+  payLink: localStorage.getItem('ds_pay_link') || '',
   startTimestamp: null,
   extractedData: null
 };
@@ -300,15 +314,48 @@ const els = {
 
 // Init
 function init() {
+  handlePaymentReturn();
   updateUI();
   setupEventListeners();
-  
+
   // Load saved rates
   document.getElementById('rate-shingles').value = state.rates.shingles;
   document.getElementById('rate-gutters').value = state.rates.gutters;
   document.getElementById('rate-guards').value = state.rates.guards;
   document.getElementById('rate-skylight').value = state.rates.skylight;
   document.getElementById('ai-key').value = state.aiKey;
+  document.getElementById('pay-link').value = state.payLink;
+}
+
+// Real payment return flow. Stripe redirects back with ?payment=success when the
+// after-payment redirect on the Payment Link is configured to this page.
+function handlePaymentReturn() {
+  const params = new URLSearchParams(location.search);
+  const pending = localStorage.getItem('ds_pending_checkout') === '1';
+  if (params.get('payment') === 'success') {
+    localStorage.removeItem('ds_pending_checkout');
+    history.replaceState(null, '', location.pathname);
+    if (!state.pro) {
+      state.pro = true;
+      localStorage.setItem('ds_pro', 'true');
+      updateUI();
+      setTimeout(() => showToast("Payment confirmed. Pro unlocked."), 600);
+    }
+  } else if (pending) {
+    localStorage.removeItem('ds_pending_checkout');
+    setTimeout(() => showToast("Checkout not finished. Retry from the paywall."), 600);
+  }
+}
+
+function payStatusLine() {
+  return (state.payLink || STRIPE_PAYMENT_LINK_URL)
+    ? "REAL CHECKOUT CONNECTED"
+    : "NO PAYMENT LINK YET. TRIAL BUTTON OPENS SETTINGS.";
+}
+
+function showPaywall() {
+  document.getElementById('pay-status').textContent = payStatusLine();
+  els.paywall.classList.add('active');
 }
 
 function updateUI() {
@@ -335,7 +382,7 @@ let isRecording = false;
 
 function startRecording() {
   if (state.usage >= 2 && !state.pro) {
-    els.paywall.classList.add('active');
+    showPaywall();
     return;
   }
 
@@ -587,7 +634,7 @@ function setupEventListeners() {
   document.getElementById('btn-record').onclick = startRecording;
   document.getElementById('btn-type').onclick = () => {
     if (state.usage >= 2 && !state.pro) {
-      els.paywall.classList.add('active');
+      showPaywall();
       return;
     }
     switchScreen('record');
@@ -634,13 +681,15 @@ function setupEventListeners() {
   
   // Paywall
   document.getElementById('btn-trial').onclick = () => {
-    if (STRIPE_PAYMENT_LINK_URL) window.location.href = STRIPE_PAYMENT_LINK_URL;
-    else {
-      state.pro = true;
-      localStorage.setItem('ds_pro', 'true');
-      updateUI();
+    const link = state.payLink || STRIPE_PAYMENT_LINK_URL;
+    if (link) {
+      localStorage.setItem('ds_pending_checkout', '1');
+      window.location.href = link;
+    } else {
       els.paywall.classList.remove('active');
-      showToast("Pro unlocked (demo)");
+      els.settingsOverlay.classList.add('active');
+      els.settingsDrawer.classList.add('active');
+      showToast("Connect a Stripe payment link in Settings first.");
     }
   };
   
@@ -666,6 +715,12 @@ function setupEventListeners() {
   document.getElementById('ai-key').onchange = (e) => {
     state.aiKey = e.target.value;
     localStorage.setItem('ds_ai_key', e.target.value);
+  };
+
+  document.getElementById('pay-link').onchange = (e) => {
+    state.payLink = e.target.value.trim();
+    localStorage.setItem('ds_pay_link', state.payLink);
+    showToast(state.payLink ? "Real checkout connected." : "Payment link cleared.");
   };
 
   document.getElementById('btn-reset').onclick = () => {
